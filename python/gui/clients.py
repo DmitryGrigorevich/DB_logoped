@@ -80,64 +80,43 @@ def add_new_client(content_frame):
 
 
     def save_data():
-        attr_names_parents = ('first_name', 'last_name', 'middle_name', 'birth_date', 'phone_number', 'metro_station', 'notes', 'gender')
         values_parents = [entry.get() or None for entry in entry_parents_data]
-        data_parents = dict(zip(attr_names_parents, values_parents))
-
-        attr_names_children = ('first_name', 'last_name', 'middle_name', 'birth_date', 'first_visit')
         values_children = [entry.get() or None for entry in entry_children_data]
-        data_children = dict(zip(attr_names_children, values_children))
-        
-
 
         with connect_db() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""
                     INSERT INTO clients (
-                    first_name,
-                    last_name,
-                    middle_name,
-                    birth_date,
-                    phone_number,
-                    metro_station,
-                    notes,
-                    gender,
-                    status) VALUES(
-                    %(first_name)s, 
-                    %(last_name)s, 
-                    %(middle_name)s, 
-                    %(birth_date)s, 
-                    %(phone_number)s, 
-                    %(metro_station)s, 
-                    %(notes)s, 
-                    %(gender)s, 
-                    'новый'
-                    ) RETURNING id""", data_parents)
+                        first_name,
+                        last_name,
+                        middle_name,
+                        birth_date,
+                        phone_number,
+                        metro_station,
+                        notes,
+                        gender,
+                        status 
+                    ) VALUES(%s, %s, %s, %s, %s, %s, %s, %s, 'новый')
+                    RETURNING id""", values_parents)
 
                 client_id = cursor.fetchone()[0]
 
                 cursor.execute("""
                     INSERT INTO patients_children (
-                    first_name,
-                    last_name,
-                    middle_name,
-                    birth_date,
-                    first_visit,
-                    status
-                    ) VALUES (
-                    %(first_name)s, 
-                    %(last_name)s, 
-                    %(middle_name)s, 
-                    %(birth_date)s, 
-                    %(first_visit)s, 
-                    'новый'
-                    ) RETURNING id""", data_children)
+                        first_name,
+                        last_name,
+                        middle_name,
+                        birth_date,
+                        first_visit,
+                        status
+                    ) VALUES (%s, %s, %s, %s, %s, 'новый')
+                    RETURNING id""", values_children)
                 
                 child_id = cursor.fetchone()[0]
                 relationship = None
-                if data_parents['gender'] == 'мужской':
+                if values_parents[7] == 'мужской':
                     relationship = 'отец'
-                elif data_parents['gender'] == 'женский':
+                elif values_parents[7] == 'женский':
                     relationship = 'мать'
                 cursor.execute("""
                     INSERT INTO clients_children
@@ -246,6 +225,66 @@ def get_archive_clients(contnent_frame):
         text='Выгрузить в exel',
         command=lambda: export_to_exel('archive_clients.xlsx', rows, columns)
     ).pack(pady=5)
-    
+
+def add_potential_client(content_frame):
+    clear(content_frame)
+
+    entry_clients_text = [
+        'Имя *',
+        'Фамилия *',
+        'Имя ребенка *',
+        'Номер телефона *',
+        'Диагноз *',
+        'Желаемое время',
+        'Желаемая дата',
+        'Заметка'
+    ]    
+
+    entry_clients_data = []
+
+    tk.Label(
+        content_frame,
+        text='Данные потенциального клиента',
+    ).grid(row=0, column=0, columnspan=5)
+
+    for el in range(0, len(entry_clients_text)):
+        tk.Label(
+            content_frame,
+            text=entry_clients_text[el]
+        ).grid(row=el + 1, column=0, sticky='e', pady=5)
+
+        entry = tk.Entry(content_frame, width=30)
+        if entry_clients_text[el] == 'Желаемая дата':
+            entry.insert(0, 'ГГГГ-ММ-ДД')
+        
+        entry.grid(row=el + 1, column=1)
+        entry_clients_data.append(entry)
 
 
+    def save():
+        values = [entry.get() or None for entry in entry_clients_data]
+        with connect_db() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO potential_clients (
+                        first_name,
+                        last_name,
+                        child_name,
+                        phone_number,
+                        diagnosis,
+                        desired_time,
+                        request_date,
+                        notes)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    """, values)
+            conn.commit()
+
+    tk.Button(
+        content_frame,
+        text='Сохранить',
+        command=save,
+    ).grid(row=len(entry_clients_text) + 2, column=0, columnspan=5)
+
+# TODO
+def get_free_place_and_clients(content_frame):
+    return
