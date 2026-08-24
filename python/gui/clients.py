@@ -25,7 +25,6 @@ def show_clients(content_frame):
             text=text,
             command=comm
             ).pack(pady=2)
-    return
 
 
 
