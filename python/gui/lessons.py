@@ -10,6 +10,8 @@ def show_lessons(content_frame):
     clear(content_frame)
 
     lessons_buttons = [
+        ('Добавить занятие', lambda: add_lesson(content_frame)),
+        ('Проставить статус занятия', lambda: add_status_lesson(content_frame)),
         ('Добавить план на занятие', lambda: add_lesson_plan(content_frame)),
         ('Просмотр плана на занятие', lambda: view_lesson_plan(content_frame)),
         ('Ввод результата и оценки', lambda: add_lesson_result(content_frame)),
@@ -22,6 +24,172 @@ def show_lessons(content_frame):
             text=text,
             command=comm
         ).pack(pady=2)
+
+def add_lesson(content_frame):
+    clear(content_frame)
+
+    tk.Label(
+        content_frame,
+        text='Добавить занятие',
+    ).grid(row=0, column=0, columnspan=4, pady=10)
+
+    tk.Label(
+        content_frame,
+        text='ID пациента'
+    ).grid(row=1, column=0, sticky='e', padx=5)
+
+    entry_patient_id = tk.Entry(
+        content_frame,
+        width=20
+    )
+    entry_patient_id.grid(row=1, column=1, pady=5)
+
+    tk.Label(
+        content_frame,
+        text='Дата (ГГГГ-ММ-ДД)'
+    ).grid(row=2, column=0, sticky='e', padx=5)
+
+    entry_date = tk.Entry(
+        content_frame,
+        width=20
+    )
+    entry_date.grid(row=2, column=1, pady=5)
+
+    tk.Label(
+        content_frame,
+        text='Время (ЧЧ:ММ)'
+    ).grid(row=3, column=0, sticky='e', padx=5)
+
+    entry_time = tk.Entry(
+        content_frame,
+        width=20
+    )
+    entry_time.grid(row=3, column=1, pady=5)
+
+    def save():
+        patient_id = entry_patient_id.get() or None
+        date = entry_date.get() or None
+        time = entry_time.get() or None
+
+        with connect_db() as conn:
+            with conn.cursor() as cursor:
+                # создаём занятие
+                cursor.execute("""
+                    INSERT INTO lessons (patient_id, status, date_lesson)
+                    VALUES (%s, 'назначено', %s)
+                    RETURNING id
+                """, (patient_id, date))
+                lesson_id = cursor.fetchone()[0]
+
+                # занимаем слот в расписании
+                cursor.execute("""
+                    UPDATE shedule
+                    SET lesson_id = %s, is_free = false
+                    WHERE date_slot = %s AND time_slot = %s
+                """, (lesson_id, date, time))
+
+            conn.commit()
+
+        tk.Label(
+            content_frame,
+            text='Занятие добавлено',
+            fg='green'
+        ).grid(row=5, column=0, columnspan=4)
+
+    tk.Button(
+        content_frame,
+        text='Сохранить',
+        command=save
+    ).grid(row=4, column=0, columnspan=4, pady=10)
+
+def add_status_lesson(content_frame):
+    clear(content_frame)
+
+    tk.Label(
+        content_frame,
+        text='Проставить статус занятия',
+        font=('Arial', 14, 'bold')
+    ).grid(row=0, column=0, columnspan=4, pady=10)
+
+    tk.Label(
+        content_frame,
+        text='Дата (ГГГГ-ММ-ДД)'
+    ).grid(row=1, column=0, sticky='e', padx=5)
+
+    entry_date = tk.Entry(
+        content_frame,
+        width=20
+    )
+    entry_date.grid(row=1, column=1, pady=5)
+
+    tk.Label(
+        content_frame,
+        text='Время (ЧЧ:ММ)'
+    ).grid(row=2, column=0, sticky='e', padx=5)
+
+    entry_time = tk.Entry(
+        content_frame,
+        width=20
+    )
+    entry_time.grid(row=2, column=1, pady=5)
+
+    tk.Label(
+        content_frame,
+        text='Статус'
+    ).grid(row=3, column=0, sticky='e', padx=5)
+
+    combo_status = ttk.Combobox(
+        content_frame,
+        values=['завершилось', 'пропущено'],
+        state='readonly',
+        width=18
+    )
+    combo_status.grid(row=3, column=1, pady=5)
+    combo_status.current(0)
+
+    def save():
+        date = entry_date.get() or None
+        time = entry_time.get() or None
+        status = combo_status.get()
+
+        with connect_db() as conn:
+            with conn.cursor() as cursor:
+                # получаем lesson_id из расписания
+                cursor.execute("""
+                    SELECT lesson_id FROM shedule
+                    WHERE date_slot = %s AND time_slot = %s
+                """, (date, time))
+                row = cursor.fetchone()
+
+                if not row or not row[0]:
+                    tk.Label(
+                        content_frame,
+                        text='Занятие не найдено',
+                        fg='red'
+                    ).grid(row=5, column=0, columnspan=4)
+                    return
+
+                lesson_id = row[0]
+
+                cursor.execute("""
+                    UPDATE lessons
+                    SET status = %s
+                    WHERE id = %s
+                """, (status, lesson_id))
+
+            conn.commit()
+
+        tk.Label(
+            content_frame,
+            text='Статус обновлён',
+            fg='green'
+        ).grid(row=5, column=0, columnspan=4)
+
+    tk.Button(
+        content_frame,
+        text='Сохранить',
+        command=save
+    ).grid(row=4, column=0, columnspan=4, pady=10)
 
 def get_lesson_by_date(date, time):
     with connect_db() as conn:
