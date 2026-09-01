@@ -46,7 +46,8 @@ def add_new_client(content_frame):
         'Фамилия *',
         'Отчество',
         'Дата рождения',
-        'Первый визит *'
+        'Первый визит *',
+        'Анамнез *'
     ]
     entry_parents_data = []
     entry_children_data = []
@@ -72,6 +73,7 @@ def add_new_client(content_frame):
     for el in range(0, len(entry_children_text)):
         tk.Label(content_frame, 
                 text=entry_children_text[el]).grid(column=0, row=12 + el, sticky='e', pady=5)
+        
 
         entry = tk.Entry(content_frame, width=30)
         entry.grid(column=2, row=12 + el)
@@ -109,7 +111,7 @@ def add_new_client(content_frame):
                         first_visit,
                         status
                     ) VALUES (%s, %s, %s, %s, %s, 'новый')
-                    RETURNING id""", values_children)
+                    RETURNING id""", values_children[:5])
                 
                 child_id = cursor.fetchone()[0]
                 relationship = None
@@ -122,6 +124,11 @@ def add_new_client(content_frame):
                     (children_id, client_id, relationship)
                     VALUES (%s, %s, %s)
                     """, (child_id, client_id, relationship))
+                cursor.execute("""
+                    INSERT INTO medical_card
+                    (patient_id, anamnesis)
+                    VALUES (%s, %s)
+                """, (child_id, values_children[5]))
 
             conn.commit()
             
