@@ -60,16 +60,16 @@ CREATE TABLE plan_lesson
   id SERIAL PRIMARY KEY,
   lesson_id INTEGER NOT NULL UNIQUE REFERENCES lessons (id),
   description TEXT,
-  reslut TEXT,
+  result TEXT,
   rating SMALLINT CHECK (rating BETWEEN 0 AND 5)
 );
 
-CREATE TABLE shedule 
+CREATE TABLE schedule 
 (
   id SERIAL PRIMARY KEY,
-  lesson_id INTEGER NOT NULL UNIQUE REFERENCES lessons (id),
-  date DATE NOT NULL,
-  time TIME NOT NULL,
+  lesson_id INTEGER UNIQUE REFERENCES lessons (id),
+  date_slot DATE NOT NULL,
+  time_slot TIME NOT NULL,
   is_free BOOLEAN NOT NULL
 );
 
@@ -80,7 +80,7 @@ CREATE TABLE payments
   lesson_id INTEGER NOT NULL REFERENCES lessons (id),
   total NUMERIC(10, 2) NOT NULL,
   payment_date DATE NOT NULL,
-  status VARCHAR(30) NOT NULL CHECK (status IN ('оплачен', 'не оплачен', 'просрочен'))
+  payment_status VARCHAR(30) NOT NULL CHECK (status IN ('оплачен', 'не оплачен', 'просрочен'))
 );
 
 CREATE TABLE potential_clients
