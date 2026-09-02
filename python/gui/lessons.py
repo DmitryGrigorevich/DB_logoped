@@ -83,7 +83,7 @@ def add_lesson(content_frame):
 
                 # занимаем слот в расписании
                 cursor.execute("""
-                    UPDATE shedule
+                    UPDATE schedule
                     SET lesson_id = %s, is_free = false
                     WHERE date_slot = %s AND time_slot = %s
                 """, (lesson_id, date, time))
@@ -156,7 +156,7 @@ def add_status_lesson(content_frame):
             with conn.cursor() as cursor:
                 # получаем lesson_id из расписания
                 cursor.execute("""
-                    SELECT lesson_id FROM shedule
+                    SELECT lesson_id FROM schedule
                     WHERE date_slot = %s AND time_slot = %s
                 """, (date, time))
                 row = cursor.fetchone()
