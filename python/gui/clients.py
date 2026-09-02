@@ -293,4 +293,99 @@ def add_potential_client(content_frame):
 
 # TODO
 def get_free_place_and_clients(content_frame):
-    return
+    clear(content_frame)
+
+    tk.Label(
+        content_frame,
+        text='Свободные места и потенциальные клиенты',
+    ).grid(row=0, column=0, columnspan=4, pady=10)
+
+    tk.Label(
+        content_frame,
+        text='Начало недели (ГГГГ-ММ-ДД)'
+    ).grid(row=1, column=0, sticky='e', padx=5)
+
+    entry_start = tk.Entry(content_frame, width=20)
+    entry_start.grid(row=1, column=1, pady=5)
+
+    tk.Label(
+        content_frame,
+        text='Конец недели (ГГГГ-ММ-ДД)'
+    ).grid(row=2, column=0, sticky='e', padx=5)
+
+    entry_end = tk.Entry(content_frame, width=20)
+    entry_end.grid(row=2, column=1, pady=5)
+
+    def show():
+        start = entry_start.get() or None
+        end = entry_end.get() or None
+
+        with connect_db() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT date_slot, time_slot
+                    FROM schedule
+                    WHERE is_free = true
+                    AND date_slot BETWEEN %s AND %s
+                    ORDER BY date_slot, time_slot
+                """, (start, end))
+                free_slots = cursor.fetchall()
+
+                cursor.execute("""
+                    SELECT first_name, last_name, phone_number, diagnosis, desired_time, request_date
+                    FROM potential_clients
+                    ORDER BY request_date
+                """)
+                potential = cursor.fetchall()
+
+        for wid in content_frame.grid_slaves():
+            if int(wid.grid_info()['row']) >= 4:
+                wid.destroy()
+
+        tk.Label(
+            content_frame,
+            text='Свободные слоты',
+        ).grid(row=4, column=0, columnspan=4, pady=5)
+
+        cols_slots = ('Дата', 'Время')
+        tree_slots = ttk.Treeview(
+            content_frame,
+            columns=cols_slots,
+            show='headings',
+            height=8
+        )
+
+        for col in cols_slots:
+            tree_slots.heading(col, text=col)
+            tree_slots.column(col, width=150)
+
+        for row in free_slots:
+            tree_slots.insert('', tk.END, values=row)
+        tree_slots.grid(row=5, column=0, columnspan=4, sticky='nsew', pady=5)
+
+        tk.Label(
+            content_frame,
+            text='Потенциальные клиенты',
+        ).grid(row=6, column=0, columnspan=4, pady=5)
+
+        cols_clients = ('Имя', 'Фамилия', 'Телефон', 'Диагноз', 'Желаемое время', 'Дата обращения')
+
+        tree_clients = ttk.Treeview(
+            content_frame,
+            columns=cols_clients,
+            show='headings',
+            height=8
+        )
+        for col in cols_clients:
+            tree_clients.heading(col, text=col)
+            tree_clients.column(col, width=110)
+            
+        for row in potential:
+            tree_clients.insert('', tk.END, values=row)
+        tree_clients.grid(row=7, column=0, columnspan=4, sticky='nsew', pady=5)
+
+    tk.Button(
+        content_frame,
+        text='Показать',
+        command=show
+    ).grid(row=3, column=0, columnspan=4, pady=5)
